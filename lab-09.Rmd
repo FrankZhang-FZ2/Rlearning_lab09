@@ -1,30 +1,132 @@
 ---
 title: "Lab 09 - Grading the professor, Pt. 1"
-author: "Insert your name here"
-date: "Insert date here"
+author: "Qilin Zhang"
+date: "3/23/2023"
 output: github_document
 ---
 
 ### Load packages and data
 
-```{r load-packages, message=FALSE}
+```{r load-packages, message=FALSE, include = FALSE}
 library(tidyverse) 
 library(tidymodels)
 library(openintro)
+library(psych)
 ```
 
 ### Exercise 1
 
-Remove this text, and add your answer for Exercise 1 here.
-Add code chunks as needed.
-Don't forget to label your code chunk.
-Do not use spaces in code chunk labels.
+It seems like people tend to rate professor relatively high. The distribution appears to be slight skewed to the left. 
+```{r descr}
+evals <- evals
+
+#descriptive analysis
+temp <- evals %>%
+  select(score) 
+descr_score <- apply(temp, 2, as.numeric)
+describe(descr_score)
+
+#visualization
+evals %>%
+  ggplot(aes(score))+
+  geom_density()
+
+```
+
 
 ### Exercise 2
 
-...
+It seems like beauty rating is positively correlated with scores. 
+```{r score_bty}
+evals %>%
+  ggplot(aes(x=score, y=bty_avg))+
+  geom_point()+
+  geom_smooth()
 
-Add exercise headings as needed.
+```
 
-## 
-For Exercise 12, relevel() function can be helpful! 
+### Exercise 3
+it adds random error into the original data to make dots in the same position more distinctive with each other. Therefore, we will be able to see the density of the scores better with jitter plot. 
+
+```{r jitter}
+evals %>%
+  ggplot(aes(x=score, y=bty_avg))+
+  geom_jitter()+
+  geom_smooth()
+
+```
+###exercise 4
+
+```{r}
+m_bty <-
+  lm(score~bty_avg,data = evals)
+summary(m_bty)
+#y=3.88034+0.06664x
+```
+
+###exercise 5
+
+```{r}
+evals %>%
+  ggplot(aes(y=score, x=bty_avg))+
+  geom_jitter()+
+  geom_abline(aes(intercept = 3.88034, slope = 0.06664, color = "orange"))
+```
+
+###exercise 6
+The slope indicate that every 1 point increase in bty_avg associate with 0.06664 increase in score. 
+
+###exercise 7 
+The intercept does not make sense in this context. It indicate the score when the bty_avg is 0, the score will be 3.8804. There is no one who score 0 in bty_avg (and likely not possible), so it does not make a lot of sense to follow it. 
+
+###exercise 8 
+It seems like bty_avg explain about 3.5% of the variance in score. It seems like it only have weak predictability to score. 
+
+
+###exercise 9 + 10
+It seems like scores are significantly difference based on gender. In particular, male tends to have higher score over female.
+
+```{r gen}
+m_gen <-
+  lm(score~gender, data = evals)
+summary(m_gen)
+
+
+#Ymale = 4.09282 + 0.14151
+#Yfemale = 4.09282
+```
+###exercise 11 + 12 + 13 
+It seems like there are significant difference based on rank. In particular, scores tends to be lower among tenure and tenure track professors. 
+
+```{r rank}
+m_rank <-
+  lm(score~rank, data = evals)
+summary(m_rank)
+
+
+evals$rank_relevel <- relevel(evals$rank, ref = "tenure track")
+m_rank_relevel <- 
+  lm(score ~ rank_relevel, data = evals)
+summary(m_rank_relevel)
+#Ytenured = 4.15463 -0.01550
+#Ytenure track = 4.15463
+#Ytenured = 4.15463 + 0.12968
+#R2 seems to show only weak to no impact from rank. 
+```
+
+###exercise 14 + 15
+
+```{r eligible}
+evals <- evals %>%
+  mutate(tenure_eligible = ifelse(rank == "teaching", "no", "yes"))
+
+m_tenure_eligible <- lm(
+  score ~ tenure_eligible,
+  data=evals
+)
+summary(m_tenure_eligible)
+#Yyes = 4.2843-0.1406
+#Yno = 4.2843
+#The R2 show overall a very weak impact of tenure eligibility on course eval scores. 
+```
+
